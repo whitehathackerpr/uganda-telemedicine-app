@@ -2,9 +2,22 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import uuid
+import sys
+import os
+import importlib.util
 
-# Import the symptom checker function from the ai-module.
-from ai_module.symptom_checker import symptom_checker
+# Add the parent directory to the Python path to import from ai-module
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(parent_dir)
+
+# Import the symptom checker function using importlib
+spec = importlib.util.spec_from_file_location(
+    "symptom_checker", 
+    os.path.join(parent_dir, "ai-module", "symptom_checker.py")
+)
+symptom_checker_module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(symptom_checker_module)
+symptom_checker = symptom_checker_module.symptom_checker
 
 # Import database functions
 from database.db import (
@@ -73,7 +86,7 @@ def symptom_checker_endpoint():
     Process symptom data and return prediction.
     
     Expects JSON body with:
-    - user_id: UUID of the user
+    - user_id: UUID of the user (optional if not authenticated)
     - features: List of 10 symptom severity values
     """
     data = request.get_json()
@@ -81,22 +94,28 @@ def symptom_checker_endpoint():
     features = data.get('features', [])
     
     # Validate input
-    if not user_id:
-        return jsonify({"error": "User ID is required"}), 400
-    
     if not features or len(features) != 10:
         return jsonify({"error": "Invalid input. Expected 10 features."}), 400
     
-    try:
-        # Convert user_id string to UUID
-        user_id_uuid = uuid.UUID(user_id)
-    except ValueError:
-        return jsonify({"error": "Invalid user ID format"}), 400
-    
-    # Save symptom input to database
-    input_data = save_symptom_input(user_id, features)
-    if not input_data:
-        return jsonify({"error": "Failed to save symptom input"}), 500
+    # If user_id is provided, validate and save to database
+    if user_id:
+        try:
+            # Convert user_id string to UUID
+            user_id_uuid = uuid.UUID(user_id)
+            
+            # Save symptom input to database
+            input_data = save_symptom_input(user_id, features)
+            if not input_data:
+                return jsonify({"error": "Failed to save symptom input"}), 500
+        except ValueError:
+            return jsonify({"error": "Invalid user ID format"}), 400
+    else:
+        # If no user_id, create a temporary input data structure
+        input_data = {
+            'input_id': None,
+            'timestamp': None,
+            'features': features
+        }
     
     # Get prediction from the AI module
     confidence_score = symptom_checker(features)
@@ -109,10 +128,17 @@ def symptom_checker_endpoint():
     else:
         predicted_condition = "Low Risk Condition"
     
-    # Save prediction to database
-    prediction = save_prediction(input_data['input_id'], predicted_condition, confidence_score)
-    if not prediction:
-        return jsonify({"error": "Failed to save prediction"}), 500
+    # Create prediction data
+    prediction = {
+        'predicted_condition': predicted_condition,
+        'confidence_score': confidence_score
+    }
+    
+    # Save prediction to database if user is authenticated
+    if user_id and input_data.get('input_id'):
+        saved_prediction = save_prediction(input_data['input_id'], predicted_condition, confidence_score)
+        if saved_prediction:
+            prediction = saved_prediction
     
     return jsonify({
         "input": input_data,
