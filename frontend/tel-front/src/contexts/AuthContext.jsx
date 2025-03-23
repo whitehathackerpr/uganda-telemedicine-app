@@ -1,52 +1,92 @@
 // src/contexts/AuthContext.jsx
-import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authService } from '../services/api';
 
-export const AuthContext = createContext();
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check if there's a stored token on mount
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      // Fetch the current user's info using the token
-      axios
-        .get('/api/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        .then((response) => {
-          setUser(response.data);
-        })
-        .catch((err) => {
-          localStorage.removeItem('token');
-          console.error('Token validation failed:', err);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } else {
-      setLoading(false);
-    }
+    checkAuth();
   }, []);
 
-  // Login handler
-  const login = (userData, token) => {
-    localStorage.setItem('token', token);
-    setUser(userData);
+  const checkAuth = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (token) {
+        const response = await authService.getCurrentUser();
+        setUser(response.data);
+      }
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Logout handler
+  const login = async (email, password) => {
+    try {
+      const response = await authService.login({ email, password });
+      const { access_token, user } = response.data;
+      localStorage.setItem('token', access_token);
+      setUser(user);
+      return user;
+    } catch (error) {
+      throw error.response?.data?.error || 'Login failed';
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      const response = await authService.register(userData);
+      const { access_token, user } = response.data;
+      localStorage.setItem('token', access_token);
+      setUser(user);
+      return user;
+    } catch (error) {
+      throw error.response?.data?.error || 'Registration failed';
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
   };
 
+  const updateProfile = async (data) => {
+    try {
+      const response = await authService.updateProfile(data);
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data?.error || 'Profile update failed';
+    }
+  };
+
+  const value = {
+    user,
+    loading,
+    login,
+    register,
+    logout,
+    updateProfile,
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {children}
+    <AuthContext.Provider value={value}>
+      {!loading && children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };
