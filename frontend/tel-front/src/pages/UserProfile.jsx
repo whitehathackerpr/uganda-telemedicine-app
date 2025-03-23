@@ -1,27 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import {
   Box,
-  Container,
-  Grid,
-  Card,
-  CardContent,
+  Paper,
   Typography,
+  Grid,
+  TextField,
   Button,
+  Avatar,
+  Divider,
   List,
   ListItem,
   ListItemText,
   ListItemIcon,
-  CircularProgress,
+  IconButton,
+  Chip,
   Alert,
-  Divider,
-  Tabs,
-  Tab,
-  TextField,
+  CircularProgress,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
+  Tab,
+  Tabs,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -29,25 +29,38 @@ import {
   Phone as PhoneIcon,
   LocationOn as LocationIcon,
   CalendarToday as CalendarIcon,
-  AccessTime as TimeIcon,
-  LocalHospital as HospitalIcon,
-  History as HistoryIcon,
   Edit as EditIcon,
-  Save as SaveIcon,
-  VideoCall as VideoCallIcon,
+  Lock as LockIcon,
+  History as HistoryIcon,
+  Settings as SettingsIcon,
+  MedicalServices as MedicalIcon,
+  Vaccines as VaccinesIcon,
+  LocalHospital as HospitalIcon,
+  Bloodtype as BloodIcon,
+  Height as HeightIcon,
+  MonitorHeart as HeartIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
-import { consultationService } from '../services/api';
+import { userService } from '../services/api';
+
+const TabPanel = ({ children, value, index, ...other }) => (
+  <div
+    role="tabpanel"
+    hidden={value !== index}
+    id={`profile-tabpanel-${index}`}
+    aria-labelledby={`profile-tab-${index}`}
+    {...other}
+  >
+    {value === index && <Box sx={{ p: 3 }}>{children}</Box>}
+  </div>
+);
 
 const UserProfile = () => {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [tabValue, setTabValue] = useState(0);
-  const [consultations, setConsultations] = useState([]);
-  const [medicalHistory, setMedicalHistory] = useState([]);
-  const [editMode, setEditMode] = useState(false);
   const [openDialog, setOpenDialog] = useState(false);
   const [formData, setFormData] = useState({
     first_name: '',
@@ -56,31 +69,25 @@ const UserProfile = () => {
     phone: '',
     address: '',
     date_of_birth: '',
+    gender: '',
+    blood_type: '',
+    height: '',
+    weight: '',
+    medical_conditions: [],
+    allergies: [],
+    medications: [],
   });
 
   useEffect(() => {
-    fetchData();
+    fetchUserProfile();
   }, []);
 
-  const fetchData = async () => {
+  const fetchUserProfile = async () => {
     try {
-      const [consultationsResponse, medicalHistoryResponse] = await Promise.all([
-        consultationService.getMyConsultations(),
-        consultationService.getMedicalHistory(),
-      ]);
-      setConsultations(consultationsResponse.data.consultations);
-      setMedicalHistory(medicalHistoryResponse.data.medical_history);
-      setFormData({
-        first_name: user.first_name,
-        last_name: user.last_name,
-        email: user.email,
-        phone: user.phone || '',
-        address: user.address || '',
-        date_of_birth: user.date_of_birth || '',
-      });
-    } catch (error) {
-      setError('Failed to fetch data');
-      console.error('Error fetching data:', error);
+      const response = await userService.getProfile();
+      setFormData(response.data.profile);
+    } catch (err) {
+      setError('Failed to fetch profile. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -90,30 +97,7 @@ const UserProfile = () => {
     setTabValue(newValue);
   };
 
-  const handleEditClick = () => {
-    setEditMode(true);
-  };
-
-  const handleSaveClick = async () => {
-    try {
-      await updateProfile(formData);
-      setEditMode(false);
-      setSuccess('Profile updated successfully');
-    } catch (error) {
-      setError('Failed to update profile');
-      console.error('Error updating profile:', error);
-    }
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleAddMedicalHistory = () => {
+  const handleOpenDialog = () => {
     setOpenDialog(true);
   };
 
@@ -121,307 +105,435 @@ const UserProfile = () => {
     setOpenDialog(false);
   };
 
-  const handleSubmitMedicalHistory = async () => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      await consultationService.addMedicalHistory(formData);
-      fetchData();
+      await userService.updateProfile(formData);
+      setSuccess('Profile updated successfully');
       handleCloseDialog();
-      setSuccess('Medical history added successfully');
-    } catch (error) {
-      setError('Failed to add medical history');
-      console.error('Error adding medical history:', error);
+      fetchUserProfile();
+    } catch (err) {
+      setError('Failed to update profile. Please try again.');
     }
   };
 
   if (loading) {
     return (
-      <Box
-        sx={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '100vh',
-        }}
-      >
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh' }}>
         <CircularProgress />
       </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Grid container spacing={3}>
-        {/* Profile Information */}
-        <Grid item xs={12} md={4}>
-          <Card>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                <Typography variant="h5">Profile Information</Typography>
-                {!editMode ? (
-                  <Button
-                    startIcon={<EditIcon />}
-                    onClick={handleEditClick}
-                    size="small"
-                  >
-                    Edit
-                  </Button>
-                ) : (
-                  <Button
-                    startIcon={<SaveIcon />}
-                    onClick={handleSaveClick}
-                    color="primary"
-                    size="small"
-                  >
-                    Save
-                  </Button>
-                )}
-              </Box>
+    <Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+      {success && (
+        <Alert severity="success" sx={{ mb: 2 }}>
+          {success}
+        </Alert>
+      )}
+
+      <Paper sx={{ mb: 3 }}>
+        <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 3 }}>
+          <Avatar
+            src={user?.avatar}
+            sx={{ width: 100, height: 100 }}
+          >
+            <PersonIcon sx={{ fontSize: 60 }} />
+          </Avatar>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h4" gutterBottom>
+              {formData.first_name} {formData.last_name}
+            </Typography>
+            <Typography variant="body1" color="text.secondary">
+              {formData.email}
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={<EditIcon />}
+            onClick={handleOpenDialog}
+          >
+            Edit Profile
+          </Button>
+        </Box>
+      </Paper>
+
+      <Paper>
+        <Tabs
+          value={tabValue}
+          onChange={handleTabChange}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label="Personal Information" />
+          <Tab label="Medical History" />
+          <Tab label="Settings" />
+        </Tabs>
+
+        <TabPanel value={tabValue} index={0}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
               <List>
-                <ListItem>
-                  <ListItemIcon>
-                    <PersonIcon />
-                  </ListItemIcon>
-                  {editMode ? (
-                    <TextField
-                      fullWidth
-                      name="first_name"
-                      value={formData.first_name}
-                      onChange={handleChange}
-                      size="small"
-                    />
-                  ) : (
-                    <ListItemText
-                      primary="Name"
-                      secondary={`${user.first_name} ${user.last_name}`}
-                    />
-                  )}
-                </ListItem>
                 <ListItem>
                   <ListItemIcon>
                     <EmailIcon />
                   </ListItemIcon>
-                  {editMode ? (
-                    <TextField
-                      fullWidth
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      size="small"
-                    />
-                  ) : (
-                    <ListItemText primary="Email" secondary={user.email} />
-                  )}
+                  <ListItemText
+                    primary="Email"
+                    secondary={formData.email}
+                  />
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
                     <PhoneIcon />
                   </ListItemIcon>
-                  {editMode ? (
-                    <TextField
-                      fullWidth
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      size="small"
-                    />
-                  ) : (
-                    <ListItemText primary="Phone" secondary={user.phone || 'Not set'} />
-                  )}
+                  <ListItemText
+                    primary="Phone"
+                    secondary={formData.phone}
+                  />
                 </ListItem>
                 <ListItem>
                   <ListItemIcon>
                     <LocationIcon />
                   </ListItemIcon>
-                  {editMode ? (
-                    <TextField
-                      fullWidth
-                      name="address"
-                      value={formData.address}
-                      onChange={handleChange}
-                      size="small"
-                    />
-                  ) : (
-                    <ListItemText primary="Address" secondary={user.address || 'Not set'} />
-                  )}
+                  <ListItemText
+                    primary="Address"
+                    secondary={formData.address}
+                  />
                 </ListItem>
               </List>
-            </CardContent>
-          </Card>
-        </Grid>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <List>
+                <ListItem>
+                  <ListItemIcon>
+                    <CalendarIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Date of Birth"
+                    secondary={new Date(formData.date_of_birth).toLocaleDateString()}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <PersonIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Gender"
+                    secondary={formData.gender}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <BloodIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Blood Type"
+                    secondary={formData.blood_type}
+                  />
+                </ListItem>
+              </List>
+            </Grid>
+          </Grid>
+        </TabPanel>
 
-        {/* Detailed Information */}
-        <Grid item xs={12} md={8}>
-          <Card>
-            <CardContent>
-              <Tabs value={tabValue} onChange={handleTabChange} sx={{ mb: 3 }}>
-                <Tab label="Consultations" />
-                <Tab label="Medical History" />
-                <Tab label="Prescriptions" />
-              </Tabs>
+        <TabPanel value={tabValue} index={1}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Medical Conditions
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                {formData.medical_conditions.map((condition, index) => (
+                  <Chip
+                    key={index}
+                    label={condition}
+                    color="primary"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
 
-              {tabValue === 0 && (
-                <Box>
-                  <List>
-                    {consultations.map((consultation) => (
-                      <ListItem key={consultation.id} divider>
-                        <ListItemIcon>
-                          <VideoCallIcon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={`Dr. ${consultation.doctor.user.first_name} ${consultation.doctor.user.last_name}`}
-                          secondary={
-                            <>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <CalendarIcon sx={{ mr: 1, fontSize: 16 }} />
-                                {new Date(consultation.datetime).toLocaleDateString()}
-                              </Box>
-                              <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                <TimeIcon sx={{ mr: 1, fontSize: 16 }} />
-                                {new Date(consultation.datetime).toLocaleTimeString()}
-                              </Box>
-                            </>
-                          }
-                        />
-                        <Chip
-                          label={consultation.status}
-                          color={
-                            consultation.status === 'scheduled'
-                              ? 'primary'
-                              : consultation.status === 'completed'
-                              ? 'success'
-                              : 'error'
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Box>
-              )}
+              <Typography variant="h6" gutterBottom>
+                Allergies
+              </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 3 }}>
+                {formData.allergies.map((allergy, index) => (
+                  <Chip
+                    key={index}
+                    label={allergy}
+                    color="error"
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Typography variant="h6" gutterBottom>
+                Current Medications
+              </Typography>
+              <List>
+                {formData.medications.map((medication, index) => (
+                  <ListItem key={index}>
+                    <ListItemIcon>
+                      <VaccinesIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary={medication.name}
+                      secondary={medication.dosage}
+                    />
+                  </ListItem>
+                ))}
+              </List>
 
-              {tabValue === 1 && (
-                <Box>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                    <Typography variant="h6">Medical History</Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<HospitalIcon />}
-                      onClick={handleAddMedicalHistory}
-                    >
-                      Add Record
+              <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>
+                Vital Statistics
+              </Typography>
+              <List>
+                <ListItem>
+                  <ListItemIcon>
+                    <HeightIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Height"
+                    secondary={`${formData.height} cm`}
+                  />
+                </ListItem>
+                <ListItem>
+                  <ListItemIcon>
+                    <HeartIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary="Weight"
+                    secondary={`${formData.weight} kg`}
+                  />
+                </ListItem>
+              </List>
+            </Grid>
+          </Grid>
+        </TabPanel>
+
+        <TabPanel value={tabValue} index={2}>
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Account Settings
+                </Typography>
+                <List>
+                  <ListItem>
+                    <ListItemIcon>
+                      <LockIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Change Password"
+                      secondary="Update your password"
+                    />
+                    <Button variant="outlined" size="small">
+                      Change
                     </Button>
-                  </Box>
-                  <List>
-                    {medicalHistory.map((record, index) => (
-                      <ListItem key={index} divider>
-                        <ListItemIcon>
-                          <HistoryIcon />
-                        </ListItemIcon>
-                        <ListItemText
-                          primary={record.condition}
-                          secondary={
-                            <>
-                              <Typography variant="body2">
-                                {record.diagnosis_date}
-                              </Typography>
-                              <Typography variant="body2" color="text.secondary">
-                                {record.treatment}
-                              </Typography>
-                            </>
-                          }
-                        />
-                      </ListItem>
-                    ))}
-                  </List>
-                </Box>
-              )}
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <SettingsIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Notification Preferences"
+                      secondary="Manage your notification settings"
+                    />
+                    <Button variant="outlined" size="small">
+                      Configure
+                    </Button>
+                  </ListItem>
+                </List>
+              </Paper>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Paper sx={{ p: 2 }}>
+                <Typography variant="h6" gutterBottom>
+                  Privacy Settings
+                </Typography>
+                <List>
+                  <ListItem>
+                    <ListItemIcon>
+                      <PersonIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Profile Visibility"
+                      secondary="Control who can see your profile"
+                    />
+                    <Button variant="outlined" size="small">
+                      Manage
+                    </Button>
+                  </ListItem>
+                  <ListItem>
+                    <ListItemIcon>
+                      <HistoryIcon />
+                    </ListItemIcon>
+                    <ListItemText
+                      primary="Medical History Access"
+                      secondary="Manage access to your medical records"
+                    />
+                    <Button variant="outlined" size="small">
+                      Control
+                    </Button>
+                  </ListItem>
+                </List>
+              </Paper>
+            </Grid>
+          </Grid>
+        </TabPanel>
+      </Paper>
 
-              {tabValue === 2 && (
-                <Box>
-                  <Typography variant="h6">Prescriptions</Typography>
-                  <List>
-                    {consultations
-                      .filter((c) => c.prescription)
-                      .map((consultation) => (
-                        <ListItem key={consultation.id} divider>
-                          <ListItemIcon>
-                            <HospitalIcon />
-                          </ListItemIcon>
-                          <ListItemText
-                            primary={`Prescription from Dr. ${consultation.doctor.user.first_name} ${consultation.doctor.user.last_name}`}
-                            secondary={
-                              <>
-                                <Typography variant="body2">
-                                  {new Date(consultation.datetime).toLocaleDateString()}
-                                </Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                  {consultation.prescription.medications.join(', ')}
-                                </Typography>
-                              </>
-                            }
-                          />
-                        </ListItem>
-                      ))}
-                  </List>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-
-      {/* Add Medical History Dialog */}
-      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
-        <DialogTitle>Add Medical History Record</DialogTitle>
-        <DialogContent>
-          <Box sx={{ pt: 2 }}>
-            <TextField
-              fullWidth
-              label="Condition"
-              name="condition"
-              value={formData.condition || ''}
-              onChange={handleChange}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Diagnosis Date"
-              name="diagnosis_date"
-              type="date"
-              value={formData.diagnosis_date || ''}
-              onChange={handleChange}
-              InputLabelProps={{ shrink: true }}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              fullWidth
-              label="Treatment"
-              name="treatment"
-              value={formData.treatment || ''}
-              onChange={handleChange}
-              multiline
-              rows={4}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>Cancel</Button>
-          <Button onClick={handleSubmitMedicalHistory} variant="contained">
-            Add Record
-          </Button>
-        </DialogActions>
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Edit Profile</DialogTitle>
+        <form onSubmit={handleSubmit}>
+          <DialogContent>
+            <Grid container spacing={2}>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="First Name"
+                  name="first_name"
+                  value={formData.first_name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="last_name"
+                  value={formData.last_name}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="Address"
+                  name="address"
+                  value={formData.address}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Date of Birth"
+                  name="date_of_birth"
+                  type="date"
+                  value={formData.date_of_birth}
+                  onChange={handleInputChange}
+                  required
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Gender"
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <MenuItem value="male">Male</MenuItem>
+                  <MenuItem value="female">Female</MenuItem>
+                  <MenuItem value="other">Other</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  select
+                  label="Blood Type"
+                  name="blood_type"
+                  value={formData.blood_type}
+                  onChange={handleInputChange}
+                  required
+                >
+                  <MenuItem value="A+">A+</MenuItem>
+                  <MenuItem value="A-">A-</MenuItem>
+                  <MenuItem value="B+">B+</MenuItem>
+                  <MenuItem value="B-">B-</MenuItem>
+                  <MenuItem value="AB+">AB+</MenuItem>
+                  <MenuItem value="AB-">AB-</MenuItem>
+                  <MenuItem value="O+">O+</MenuItem>
+                  <MenuItem value="O-">O-</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Height (cm)"
+                  name="height"
+                  type="number"
+                  value={formData.height}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  fullWidth
+                  label="Weight (kg)"
+                  name="weight"
+                  type="number"
+                  value={formData.weight}
+                  onChange={handleInputChange}
+                  required
+                />
+              </Grid>
+            </Grid>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
+            <Button type="submit" variant="contained">
+              Save Changes
+            </Button>
+          </DialogActions>
+        </form>
       </Dialog>
-
-      {error && (
-        <Alert severity="error" sx={{ mt: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mt: 2 }}>
-          {success}
-        </Alert>
-      )}
-    </Container>
+    </Box>
   );
 };
 

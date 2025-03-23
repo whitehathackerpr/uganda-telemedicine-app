@@ -3,51 +3,91 @@ import { createTheme } from '@mui/material/styles';
 const theme = createTheme({
     palette: {
         primary: {
-            main: '#2E7D32', // Deep green
-            light: '#4CAF50',
-            dark: '#1B5E20',
+            main: '#1976d2',
+            light: '#64b5f6',
+            dark: '#1565c0',
             contrastText: '#ffffff',
         },
         secondary: {
-            main: '#81C784', // Light green
-            light: '#A5D6A7',
-            dark: '#388E3C',
-            contrastText: '#000000',
+            main: '#2e7d32',
+            light: '#4caf50',
+            dark: '#1b5e20',
+            contrastText: '#ffffff',
+        },
+        error: {
+            main: '#d32f2f',
+            light: '#ef5350',
+            dark: '#c62828',
+            contrastText: '#ffffff',
+        },
+        warning: {
+            main: '#ed6c02',
+            light: '#ff9800',
+            dark: '#e65100',
+            contrastText: '#ffffff',
+        },
+        info: {
+            main: '#0288d1',
+            light: '#03a9f4',
+            dark: '#01579b',
+            contrastText: '#ffffff',
+        },
+        success: {
+            main: '#2e7d32',
+            light: '#4caf50',
+            dark: '#1b5e20',
+            contrastText: '#ffffff',
+        },
+        grey: {
+            50: '#fafafa',
+            100: '#f5f5f5',
+            200: '#eeeeee',
+            300: '#e0e0e0',
+            400: '#bdbdbd',
+            500: '#9e9e9e',
+            600: '#757575',
+            700: '#616161',
+            800: '#424242',
+            900: '#212121',
         },
         background: {
-            default: '#F5F5F5',
-            paper: '#FFFFFF',
-        },
-        text: {
-            primary: '#333333',
-            secondary: '#666666',
+            default: '#f5f5f5',
+            paper: '#ffffff',
         },
     },
     typography: {
-        fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+        fontFamily: '"Inter", "Roboto", "Helvetica", "Arial", sans-serif',
         h1: {
+            fontWeight: 700,
             fontSize: '2.5rem',
-            fontWeight: 600,
         },
         h2: {
+            fontWeight: 700,
             fontSize: '2rem',
-            fontWeight: 600,
         },
         h3: {
-            fontSize: '1.75rem',
             fontWeight: 600,
+            fontSize: '1.75rem',
         },
         h4: {
-            fontSize: '1.5rem',
             fontWeight: 600,
+            fontSize: '1.5rem',
         },
         h5: {
-            fontSize: '1.25rem',
             fontWeight: 600,
+            fontSize: '1.25rem',
         },
         h6: {
-            fontSize: '1rem',
             fontWeight: 600,
+            fontSize: '1rem',
+        },
+        subtitle1: {
+            fontSize: '1rem',
+            fontWeight: 500,
+        },
+        subtitle2: {
+            fontSize: '0.875rem',
+            fontWeight: 500,
         },
         body1: {
             fontSize: '1rem',
@@ -55,7 +95,11 @@ const theme = createTheme({
         },
         body2: {
             fontSize: '0.875rem',
-            lineHeight: 1.5,
+            lineHeight: 1.43,
+        },
+        button: {
+            textTransform: 'none',
+            fontWeight: 500,
         },
     },
     shape: {
@@ -65,8 +109,16 @@ const theme = createTheme({
         MuiButton: {
             styleOverrides: {
                 root: {
-                    textTransform: 'none',
                     borderRadius: 8,
+                    padding: '8px 16px',
+                    textTransform: 'none',
+                    fontWeight: 500,
+                },
+                contained: {
+                    boxShadow: 'none',
+                    '&:hover': {
+                        boxShadow: 'none',
+                    },
                 },
             },
         },
@@ -74,7 +126,14 @@ const theme = createTheme({
             styleOverrides: {
                 root: {
                     borderRadius: 12,
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                },
+            },
+        },
+        MuiPaper: {
+            styleOverrides: {
+                root: {
+                    borderRadius: 12,
                 },
             },
         },
@@ -84,6 +143,20 @@ const theme = createTheme({
                     '& .MuiOutlinedInput-root': {
                         borderRadius: 8,
                     },
+                },
+            },
+        },
+        MuiDrawer: {
+            styleOverrides: {
+                paper: {
+                    borderRadius: '0 12px 12px 0',
+                },
+            },
+        },
+        MuiAppBar: {
+            styleOverrides: {
+                root: {
+                    borderRadius: '12px 0 0 12px',
                 },
             },
         },
