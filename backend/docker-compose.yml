@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/symptom_checker
+      - SECRET_KEY=your-secret-key-here
+      - FIREBASE_CREDENTIALS=/app/firebase-credentials.json
+    volumes:
+      - .:/app
+      - ../ai-module:/app/ai-module
+
+  db:
+    image: postgres:13
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=symptom_checker
+    ports:
+      - "5432:5432"
+
+volumes:
+  postgres_data:
