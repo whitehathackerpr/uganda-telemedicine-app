@@ -1,0 +1,13 @@
+# Web framework
+Flask==2.0.1
+Flask-Cors==3.0.10
+
+# Database
+psycopg2-binary==2.9.3
+
+# AI/ML
+tensorflow==2.8.0
+numpy==1.22.3
+
+# Utilities
+python-dotenv==0.19.2
