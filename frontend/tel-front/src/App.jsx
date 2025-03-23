@@ -6,7 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import AppointmentBooking from './pages/AppointmentBooking';
 import VideoConsultation from './pages/VideoConsultation';
-import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRoute from './contexts/ProtectedRoute';
 import { AuthProvider } from './contexts/AuthContext';
 import SymptomChecker from "./pages/SymptomChecker";
 
@@ -35,8 +35,8 @@ const App = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/symptom-checker" element={<SymptomChecker />} />
         </Routes>
-        <Route path="/symptom-checker" element={<SymptomChecker />} />
       </Router>
     </AuthProvider>
   );
